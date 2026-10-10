@@ -13,6 +13,7 @@ Repo belajar **Redis** untuk fullstack developer (NestJS + ReactJS). Berisi doku
 | [01-apa-itu-redis.md](01-apa-itu-redis.md) | Pengertian & konsep dasar Redis |
 | [02-redis-roadmap.md](02-redis-roadmap.md) | Roadmap belajar lengkap (Fase 0–7) |
 | [03-tipe-data-redis.md](03-tipe-data-redis.md) | Tipe data Redis (String, Hash, List, Set, Sorted Set) |
+| [04-integrasi-nestjs.md](04-integrasi-nestjs.md) | Integrasi Redis dengan NestJS (ioredis + RedisModule) |
 
 ---
 
