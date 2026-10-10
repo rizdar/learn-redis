@@ -11,7 +11,7 @@
 - [ ] Paham dasar HTTP, REST API, dan konsep stateful vs stateless.
 - [ ] Install Redis di lokal:
   - **Windows**: WSL2 + Redis, atau Docker (disarankan).
-  - **Docker**: `docker run -d --name redis -p 6379:6379 redis:7`
+  - **Docker**: `docker run -d --name redis -p 6379:6379 redis:8`
 - [ ] Install GUI client (pilih salah satu):
   - RedisInsight (resmi, gratis)
   - Another Redis Desktop Manager (ARDM)
@@ -23,7 +23,7 @@
 
 - [ ] Apa itu Redis? (In-memory data store, key-value, kecepatan vs durability).
 - [ ] Kapan Redis dibutuhkan dan kapan TIDAK (bukan pengganti database utama).
-- [ ] Tipe data utama:
+- [ ] Redis itu *single-threaded event loop*: satu command lambat memblok seluruh server — hindari `HGETALL` pada hash raksasa, `KEYS *`, `SMEMBERS` pada set besar (ini alasan anti-pattern di Fase 6).
   - **String**: `SET`, `GET`, `SETEX`, `INCR`, `DECR`, `MSET`, `MGET`.
   - **Hash**: `HSET`, `HGET`, `HGETALL`, `HINCRBY`.
   - **List**: `LPUSH`, `RPUSH`, `LRANGE`, `LPOP`, `RPOP`.
@@ -52,7 +52,7 @@
   - Simpan session/user profile dengan `Hash`.
   - Leaderboard dengan `Sorted Set`.
 
-**Proyek mini:** Buat API leaderboard game sederhana + rate limiter manual (menggunakan `INCR` + `EXPIRE`).
+**Proyek mini:** Buat API leaderboard game sederhana + rate limiter manual (menggunakan `INCR` + `EXPIRE`). *Catatan: versi ini punya race condition (langkah non-atomic), akan diperbaiki dengan Lua di Fase 4.*
 
 ---
 
@@ -86,6 +86,7 @@
   - `PUBLISH`, `SUBSCRIBE`, `PSUBSCRIBE`.
   - Integrasi dengan NestJS (WebSocket/SSE untuk realtime ke React).
   - Catat kelemahan: message tidak disimpan, tidak ada guarantee delivery → untuk kasus penting pakai Redis Streams.
+  - Subscriber butuh koneksi terpisah (di ioredis: `redis.duplicate()`) — koneksi dalam mode subscribe tidak bisa mengirim command lain.
 - [ ] **Redis Streams** (untuk antrian & event log):
   - `XADD`, `XREAD`, `XREADGROUP`, `XACK`, `XPENDING`.
   - Consumer groups.
@@ -112,10 +113,11 @@
   - Caching API response.
   - Caching hasil query DB.
   - Full-page / HTTP caching.
-- [ ] **Distributed Lock**: `SET key value NX EX` untuk mencegah double processing.
+- [ ] **Distributed Lock**: `SET key <token-unik> NX PX <ttl>` untuk mencegah double processing. Simpan *nilai unik* (token) di lock, dan hanya pemilik token yang boleh melepasnya (release atomic via Lua: cek token lalu `DEL`).
 - [ ] **Leaderboard / Ranking**: Sorted Set.
 - [ ] **Queue / Job Processing**: Redis Streams atau BullMQ (disarankan untuk NestJS).
   - **BullMQ** + `@nestjs/bullmq` untuk background job & antrian.
+  - ⚠️ Instance Redis untuk BullMQ wajib `noeviction` — pisahkan dari Redis cache (kalau tidak, job bisa hilang/stuck).
 - [ ] **Realtime Features**: Pub/Sub + WebSocket.
 - [ ] **Idempotency Key**: mencegah duplicate request (payment, form submit).
 
@@ -135,13 +137,13 @@
   - Password auth (`requirepass`).
 - [ ] **Konfigurasi Keamanan**:
   - `requirepass`, jangan expose port 6379 ke publik.
-  - Rename command berbahaya (`FLUSHALL`, `CONFIG`, `KEYS`).
+  - ACL dasar: buat user terbatas (bukan full access) untuk aplikasi.
   - Bind ke localhost/internal network.
 - [ ] **Monitoring**:
   - `INFO`, `MONITOR`, `SLOWLOG`.
   - RedisInsight monitoring.
   - Memori: `maxmemory`, `maxmemory-policy` (e.g. `allkeys-lru`).
-- [ ] **Eviction Policy**: pahami LRU vs LFU vs TTL.
+- [ ] **Eviction Policy**: pahami LRU vs LFU vs TTL. Redis untuk queue (BullMQ) wajib `noeviction`; eviction hanya untuk Redis cache.
 - [ ] **Connection Pooling & Reconnect** di `ioredis`.
 - [ ] **Error Handling**: fallback saat Redis down (jangan crash API).
 - [ ] **Scaling** (konsep):
